@@ -9,15 +9,17 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func main() {
 	iterations := flag.Int("iterations", 1, "Max iterations")
-	filename := flag.String("filename", "in1.txt", "Input filename")
+	fileInput := flag.String("fileInput", "a_example.in", "Input filename")
+	fileOutput := flag.String("fileOutput", "", "Output filename, appends to the input filename if empty")
 	flag.Parse()
 
-	target, numbers, err := ReadInput(*filename)
+	target, numbers, err := ReadInput(*fileInput)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -57,11 +59,20 @@ func main() {
 		}
 	}
 
+	if *fileOutput == "" {
+		*fileOutput = *fileInput + ".out"
+	}
+
+	err = SaveOutput(*fileOutput, target, bestSum, bestSlices)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	fmt.Printf("Target is %v, best is %v, delta is %v, the number of pizzas is %v\n", target, bestSum, target-bestSum, len(bestSlices))
 }
 
 func ReadInput(filename string) (int64, []int64, error) {
-	file, err := os.Open(filename)
+	file, err := os.Open("data/" + filename)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -112,4 +123,26 @@ func ReadInput(filename string) (int64, []int64, error) {
 	}
 
 	return target, numbers, nil
+}
+
+func SaveOutput(filename string, target int64, sum int64, slices []int64) error {
+	file, err := os.OpenFile("data/"+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
+	if err != nil {
+		return err
+	}
+
+	slcs := make([]string, 0)
+
+	for _, slice := range slices {
+		slcs = append(slcs, strconv.FormatInt(slice, 10))
+	}
+
+	str := fmt.Sprintf("%v\n%s\n", len(slices), strings.Join(slcs, " "))
+
+	_, err = file.Write([]byte(str))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
