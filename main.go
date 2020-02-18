@@ -23,22 +23,31 @@ func main() {
 	}
 
 	rand.Seed(time.Now().Unix())
-	best := int64(0)
+	bestSum := int64(0)
+	bestSlices := make([]int64, 0)
 
 	for i := 0; i < *iterations; i++ {
 		//Don't shuffle on 1 iteration
 		if *iterations != 1 {
 			rand.Shuffle(len(numbers), func(a, b int) { numbers[a], numbers[b] = numbers[b], numbers[a] })
+			//fmt.Println(numbers)
 		}
 
 		sum := int64(0)
+		slices := make([]int64, 0)
 
 		for _, n1 := range numbers {
-			if n1+sum >= target {
+			if n1+sum > target {
 				break
 			}
 
 			sum += n1
+			slices = append(slices, n1)
+		}
+
+		if sum > bestSum {
+			bestSum = sum
+			bestSlices = slices
 		}
 
 		if sum == target {
@@ -46,13 +55,9 @@ func main() {
 
 			break
 		}
-
-		if sum > best {
-			best = sum
-		}
 	}
 
-	fmt.Printf("Best is %v, delta is %v\n", best, target-best)
+	fmt.Printf("Target is %v, best is %v, delta is %v, the number of pizzas is %v\n", target, bestSum, target-bestSum, len(bestSlices))
 }
 
 func ReadInput(filename string) (int64, []int64, error) {
