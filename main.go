@@ -8,48 +8,75 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
 
+type sortable struct {
+	index []int64
+}
+
+func (s sortable) Len() int {
+	return len(s.index)
+}
+
+func (s sortable) Less(i, j int) bool {
+	return s.index[i] < s.index[j]
+}
+
+func (s sortable) Swap(i, j int) {
+	s.index[i], s.index[j] = s.index[j], s.index[i]
+}
+
 func main() {
-	iterations := flag.Int("iterations", 1, "Max iterations")
+	iterations := flag.Int("iterations", 3, "Max iterations")
 	fileInput := flag.String("fileInput", "a_example.in", "Input filename")
 	fileOutput := flag.String("fileOutput", "", "Output filename, appends to the input filename if empty")
 	flag.Parse()
 
-	target, numbers, err := ReadInput(*fileInput)
+	target, numberss, err := ReadInput(*fileInput)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	rand.Seed(time.Now().Unix())
 	bestSum := int64(0)
-	bestSlices := make([]int64, 0)
+	bestPizzas := make([]int64, 0)
 
 	for i := 0; i < *iterations; i++ {
+		numbers := make([]int64, len(numberss))
+		copy(numbers, numberss)
+
+		sequence := make([]int64, len(numbers))
+		for i := range sequence {
+			sequence[i] = int64(i)
+		}
+		
 		//Don't shuffle on 1 iteration
 		if *iterations != 1 {
-			rand.Shuffle(len(numbers), func(a, b int) { numbers[a], numbers[b] = numbers[b], numbers[a] })
-			//fmt.Println(numbers)
+			rand.Shuffle(len(numbers), func(a, b int) {
+				numbers[a], numbers[b] = numbers[b], numbers[a]
+				sequence[a], sequence[b] = sequence[b], sequence[a]
+			})
 		}
 
 		sum := int64(0)
-		slices := make([]int64, 0)
+		pizzas := make([]int64, 0)
 
-		for _, n1 := range numbers {
+		for j, n1 := range numbers {
 			if n1+sum > target {
 				break
 			}
 
 			sum += n1
-			slices = append(slices, n1)
+			pizzas = append(pizzas, sequence[j])
 		}
 
 		if sum > bestSum {
 			bestSum = sum
-			bestSlices = slices
+			bestPizzas = pizzas
 		}
 
 		if sum == target {
@@ -63,12 +90,14 @@ func main() {
 		*fileOutput = *fileInput + ".out"
 	}
 
-	err = SaveOutput(*fileOutput, target, bestSum, bestSlices)
+	sort.Sort(sortable{bestPizzas})
+
+	fmt.Printf("Target is %v, best is %v, delta is %v, the number of pizzas is %v\n", target, bestSum, target-bestSum, len(bestPizzas))
+
+	err = SaveOutput(*fileOutput, target, bestSum, bestPizzas)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Printf("Target is %v, best is %v, delta is %v, the number of pizzas is %v\n", target, bestSum, target-bestSum, len(bestSlices))
 }
 
 func ReadInput(filename string) (int64, []int64, error) {
@@ -125,19 +154,19 @@ func ReadInput(filename string) (int64, []int64, error) {
 	return target, numbers, nil
 }
 
-func SaveOutput(filename string, target int64, sum int64, slices []int64) error {
+func SaveOutput(filename string, target int64, sum int64, pizzas []int64) error {
 	file, err := os.OpenFile("data/"+filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
 	if err != nil {
 		return err
 	}
 
-	slcs := make([]string, 0)
+	pzz := make([]string, 0)
 
-	for _, slice := range slices {
-		slcs = append(slcs, strconv.FormatInt(slice, 10))
+	for _, pizza := range pizzas {
+		pzz = append(pzz, strconv.FormatInt(pizza, 10))
 	}
 
-	str := fmt.Sprintf("%v\n%s\n", len(slices), strings.Join(slcs, " "))
+	str := fmt.Sprintf("%v\n%s\n", len(pizzas), strings.Join(pzz, " "))
 
 	_, err = file.Write([]byte(str))
 	if err != nil {
